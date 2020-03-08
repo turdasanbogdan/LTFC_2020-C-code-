@@ -1,21 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+#include "alex.h"
 char * pch;
 enum{ID, BREAK, CHAR, DOUBLE, ELSE, FOR, IF , INT , REUTRN, STRUCT, VOID, WHILE, 
 CT_INT, CT_REAL,CT_CHAR, CT_STRING,
 COMMA, SEMICOLON, LPAR, RPAR, LBRACKET,RBRACKET, LACC,RACC,
 ADD, SUB, MUL, DIV, DOT, AND, OR, NOT, ASSIGN, EQUAL, NOTEQ,LESS,LESSEQ,GREATER,GREATEREQ,
-SPACE, LINECOMMENT, COMMENT};
-int main(){
+SPACE, LINECOMMENT, COMMENT, UNKNOWN};
+int main(int argc, char **argv){
      
-    char file_name[32]; 
-    
-    printf("File name: ");
-    scanf("%s",&file_name);
-    printf("file name: %s", file_name);
-    
-    FILE *f = fopen(file_name, "rb");
+    FILE *f = fopen(argv[1], "rb");
     if (!f) {
         perror("Eroare la deschiderea fisierului");
         exit(EXIT_FAILURE);
@@ -38,5 +32,9 @@ int main(){
 
     pch = buff;
     printf("In fisier avem ceva de genu: %s", pch);
+
+    getState(pch);
+
+
     return 0;
 }

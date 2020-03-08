@@ -1,3 +1,7 @@
 //1.c
-int tmp = 108;
+//2.
+//3456789
+//sadasd
+'c'
+"ana are mere"
 
