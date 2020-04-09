@@ -1,6 +1,6 @@
 
 #include "main.h"
-char * pch;
+
 
 void err(const char *fmt, ...){
     va_list va;
@@ -27,7 +27,7 @@ int main(int argc, char **argv){
     
     rewind(f);
 
-    Token *tk;
+    
     char *buff;
     buff = (char *)malloc(size*sizeof(char));
     if(!buff){
@@ -40,7 +40,7 @@ int main(int argc, char **argv){
     pch = buff;
     printf("In fisier avem ceva de genu: %s", pch);
 
-    getNextToken(pch,tk);
+    getNextToken();
 
 
     return 0;
