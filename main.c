@@ -490,18 +490,571 @@ int getNextToken(){
 
 Token *consumedTk;
 Token *crtTk;
+int unit();
+int declStruct();
+int declVar();
+int typeBase();
+int arrayDecl();
+int typeName();
+int declFunc();
+int funcArg();
+int stm();
+int stmCompound();
+int expr();
+int exprAssign();
+int exprOr();
+int exprAnd();
+int exprEq();
+int exprRel();
+int exprAdd();
+int exprMul();
+int exprCast();
+int exprUnary();
+int exprPostfix();
+int exprPrimary();
 
-int consume(int code)
-{
-if(pch->code==code){
-consumedTk=pch;
-crtTk=crtTk->next;
-return 1;
+
+int consume( int code ){
+	printf("consume(%s)",codeName(code));
+	
+   if(crtTk -> code == code){
+		printf("=> consumat\n");
+		crtTk = crtTk -> next;
+		return 1;
+	}else
+   {
+		printf("=>altceva\n", codeName(crtTk-> code));;//for debbuging
+		return 0;
+   }
 }
+
+int unit(){
+	Token *start=crtTk;
+	for(;;){
+		if(declStruct()){}
+	      else if(declFunc()){}
+	      	else if(declVar()){} 
+	      		else break;		
+
+	}
+
+	if(consume(END)){
+		return 1;
+	}
+
+	crtTk = start;
+
+	return 0;
+}
+
+int declStruct(){
+
+	Token *start=crtTk; // daca nu se indeplineste totul, nu se consuma nimic atunci
+	if(consume(STRUCT))
+		if(consume(ID))
+			if(consume(LACC))
+			{   //while declVar(){}
+				for(;;){
+					if(declVar()){}
+					else break;
+				}
+				if(consume(RACC)){
+					if(consume(SEMICOLON)){
+						return 1;
+					}
+				}
+
+			}
+		
+crtTk = start;	// restaurare pozitie initiala
 return 0;
+ 
+}
+
+int declVar(){
+   Token *start = crtTk;
+   if(typeBase()){
+      if(consume(ID)){
+         if(arrayDecl()){}
+            else {}
+
+         for(;;){
+            if(consume(COMMA)){
+               if(cosume(ID)){
+                   if(arrayDecl()){}
+                     else {}
+               } else break;
+            } else break; 
+         }
+         
+      }
+      
+      if(consume(SEMICOLON)) { return 1; }
+   }
+
+   crtTk = start;
+   return 0;
+
+}
+
+int typeBase(){
+    
+   Token *start = crtTk; 
+
+   if(consume(ID)){ if(consume(ID)) {return 1;}}
+      else if(consume(DOUBLE)){ if(consume(ID)) {return 1;}}
+         else if(consume(CHAR)){ if(consume(ID)) {return 1;}}
+            else if(consume(STRUCT)){ if(consume(ID)) {return 1;}}
+
+   crtTk = start;
+   return 0;
+}
+
+int arrayDecl(){
+   Token *start = crtTk; 
+
+   if(consume(LBRACKET)){
+      if(expr()){}
+       else {}
+
+       if(consume(RBRACKET)){
+          return 1;
+       }
+   }
+
+   crtTk = start;
+   return 0;
+
+
+}
+
+int typeName(){
+   Token *start = crtTk; 
+
+   if(typeBase()){
+      if(arrayDecl()){return 1;}
+        else return 1;
+   }
+
+   crtTk = start;
+   return 0;
+
+}
+
+int declFunc(){
+   Token *start = crtTk; 
+
+   if(typeBase()){
+      if(MUL){}
+       else {
+          if(VOID){}
+       }
+
+       if(consume(ID)){
+          if(consume(LPAR)){
+            if(funcArg()){
+               for(;;){
+                  if(consume(COMMA)){
+                     if(funcArg()){
+
+                     }
+                  }else break;
+               }
+            }else {}
+            if(consume(RPAR)){
+               if(stmCompound){return 1;}
+            }
+          }
+       }
+
+
+   }
+
+
+   crtTk = start;
+   return 0;
+
+
+}
+
+int funcArg(){
+   Token *start = crtTk; 
+
+   if(typeBase()){
+      if(consume(ID)){
+         if(arrayDecl()){return 1;}
+          else {return 1;}
+      }
+   }
+
+   crtTk = start;
+   return 0;
+
+}
+
+int stm(){
+   
+   Token *start = crtTk; 
+
+   if(stmCompound()) {return 1;}
+    else if(consume(IF)){
+       if(consume(LPAR)){
+          if(expr()){
+             if(consume(RPAR)){
+                if(stm()){
+                   if(consume(ELSE)){
+                       if(stm()) return 1; 
+                   } else{return 1;}
+                }
+             }
+          }
+       }
+    }
+      else if(consume(WHILE)){
+         if(consume(LPAR)){
+            if(expr()){
+               if(consume(RPAR)){
+                  if(stm()) return 1;
+               }
+            }
+         }
+      }
+         else if(consume(FOR)){
+            if(consume(LPAR)){
+               if(epxr()){}
+                else{}
+
+               if(consume(SEMICOLON)){
+                  if(epxr()){}
+                   else{}
+
+                   if(consume(SEMICOLON)){
+                     if(epxr()){}
+                      else{} 
+                     
+
+                   if(consume(RPAR)){
+                      if(stm()) return 1;
+                   } 
+                  }  
+               } 
+            }
+         }
+
+            else if(consume(BREAK)){
+                if(consume(SEMICOLON)) return 1;
+            }
+               else if(consume(RETURN)){
+                  if(epxr()){}
+                   else{}
+
+                   if(consume(SEMICOLON)){ return 1; }
+                  
+               }
+
+                  else if(expr() && consume(SEMICOLON)) return 1;
+                     else if(consume(SEMICOLON)) return 1;
+                     
+                  
+
+   crtTk = start;
+   return 0;
+
+}
+
+int stmCompound(){
+
+   Token *start = crtTk; 
+
+   if(consume(LACC)){
+      for(;;){
+         if(declVar() || stm()){}
+          else break;
+      }
+      if(consume(RACC)) return 1;
+
+   }
+
+   crtTk = start;
+   return 0;
+}
+
+int expr(){
+    Token *start = crtTk; 
+
+    if(exprAssign()) return 1;
+    crtTk = start;
+    return 0;
+}
+
+int exprAssign(){
+   Token *start = crtTk; 
+   if(exprUnary()){
+      if(consume(ASSIGN)){
+         if(exprAssign()) return 1;
+      }
+   } else if(exprOr()) return 1;
+
+    crtTk = start;
+    return 0;
 }
 
 
+int exprOrPrim(){}
+int exprAndPrim(){}
+int exprEqPrim(){}
+int exprRelPrim(){}
+int exprAddPrim(){}
+int exprMulPrim(){}
+int exprPostfixPrim(){}
+
+
+int exprOr(){
+   Token *start = crtTk; 
+
+   if(exprAnd()){
+      if(exprOrPrim()) return 1;
+   }
+   
+   crtTk = start;
+   return 0;
+}
+
+int exprOrPrim(){
+   Token *start = crtTk;
+
+   if(consume(OR)){
+      if(exprAnd()){
+         if(exprOrPrim()) return 1;
+      }
+   }
+   crtTk = start;
+   return 1;
+   
+}
+
+int exprAnd(){
+    Token *start = crtTk; 
+    
+    if(exprEq()){
+       if(exprAndPrim()) return 1;
+    }
+    
+    crtTk = start;
+    return 0;
+}
+
+int exprAndPrim(){
+   Token *start = crtTk;
+
+   if(consume(AND)){
+       if(exprEq()){
+         if(exprAddPrim()) return 1;
+       }  
+   }
+
+   crtTk = start;
+   return 1;
+}
+
+int exprEq(){
+   Token *start = crtTk; 
+
+   if(exprRel()){
+      if(exprEqPrim()) return 1;
+   }
+  
+   crtTk = start;
+   return 0; 
+}
+
+int exprEqPrim(){
+   Token *start = crtTk; 
+
+   if(consume(EQUAL) || consume(NOT)){
+      if(exprRel()){
+         if(exprEqPrim()) return 1;
+      }
+   }
+
+   
+   crtTk = start;
+   return 1; 
+}
+
+int exprRel(){
+   Token *start = crtTk; 
+
+   if(exprAdd()){
+      if(exprRelPrim()) return 1;
+   }
+
+   crtTk = start;
+   return 0; 
+}
+
+int exprRelPrim(){
+
+   Token *start = crtTk; 
+
+   if(consume(LESS) || consume(LESSEQ) || consume(GREATER) || consume(GREATEREQ)){
+      if(exprAdd()){
+         if(exprRelPrim()) return 1;
+      }
+   }
+
+   crtTk = start;
+   return 1; 
+
+}
+
+int exprAdd(){
+   Token *start = crtTk; 
+
+   if(exprMul()){
+      if(exprAddPrim()) return 1;
+   }   
+
+   crtTk = start;
+   return 0;
+
+}
+
+int exprAddPrim(){
+   Token *start = crtTk; 
+
+   if(consume(ADD) || consume(SUB)){
+      if(exprMul()){
+         if(exprAddPrim()) return 1;
+      }
+   }
+
+   
+   crtTk = start;
+   return 1; 
+}
+
+int exprMul(){
+   Token *start = crtTk; 
+
+   if(exprCast()){
+      if(exprMulPrim()) return 1;
+   }   
+
+   crtTk = start;
+   return 0;
+
+
+}
+
+int exprMulPrim(){
+   Token *start = crtTk; 
+
+   if(consume(MUL) || consume(DIV)){
+      if(exprCast()){
+         if(exprMulPrim()) return 1;
+      }
+   }
+
+   
+   crtTk = start;
+   return 1; 
+}
+
+exprCast(){
+   Token *start = crtTk; 
+
+   if(consume(LPAR)){
+      if(typeName()){
+         if(consume(RPAR)){
+            if(exprCast()) return 1;
+         }
+      }
+   } else if(exprUnary()) return 1;
+
+    
+   crtTk = start;
+   return 0; 
+}
+
+int exprUnary(){
+   Token *start = crtTk;
+   if(consume(SUB)|| consume(NOT)){
+      if(exprUnary()) return 1;
+   }else if(exprPostfix()) return 1;
+
+   crtTk = start;
+   return 0; 
+
+}
+
+int exprPostfix(){
+   Token *start = crtTk;
+
+   if(exprPrimary()){
+      if(exprPostfixPrim()) return 1;
+   }
+
+   crtTk = start;
+   return 0; 
+}
+
+int exprPostfixPrim(){
+   Token *start = crtTk;
+
+   if(consume(LBRACKET)){
+      if(expr()){
+         if(consume(RBRACKET)){
+            if(exprPostfixPrim()) return 1;
+         }
+      }
+   }else if(consume(DOT)){
+      if(consume(ID)){
+         if(exprPostfixPrim()) return 1;
+      }
+   }
+
+   crtTk = start;
+   return 0; 
+}
+
+int exprPrimary(){
+   Token *start = crtTk;
+
+   if(consume(ID)){
+      if(consume(LPAR)){
+        if(expr()){
+           for(;;){
+              if(consume(COMMA)){
+                 if (expr()){
+
+                 }else break;
+              }else break;
+           }
+
+        }
+        if(consume(RPAR)){ return 1; }
+      } else{ return 1;}
+   }else if(consume(CT_INT)) return 1;
+      else if(consume(CT_REAL)) return 1;
+         else if(consume(CT_CHAR)) return 1;
+            else if(consume(CT_STRING)) return 1;
+               else if(consume(LPAR)){
+                  if(expr()){
+                     if(consume(RPAR)) return 1;
+                  }
+               }
+
+   crtTk = start;
+   return 0;             
+
+}
+ /*
+    ANALIZATOR LEXICAL - line 89
+    ANALIZATOR SINTACTIC - line 489
+    
+ */
+    
 int main(int argc, char **argv){
     FILE *f = fopen(argv[1], "rb");
     if (!f) {
@@ -538,12 +1091,7 @@ int main(int argc, char **argv){
        crtTk = crtTk->next;
     }
     
-    /*
-    ANALIZATOR LEXICAL - line 89
-    ANALIZATOR SINTACTIC - line 489
-    
-    */
-    
+   
 
     
     return 0;
