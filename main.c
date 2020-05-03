@@ -86,6 +86,7 @@ char *pch;
 
 
 char special_characters[9]= "abfnrtv?";
+//!!!!!!!!!!!!!!!!!!--ANALIZATORUL LEXICAL--!!!!!!!!!!!!!!!!!!
 int getNextToken(){
    
    Token *tk; 
@@ -485,6 +486,20 @@ int getNextToken(){
 
 }
 
+//!!!!!!!!!!!!!!!!!!--ANALIZATORUL SINTACTIC--!!!!!!!!!!!!!!!!!!
+
+Token *consumedTk;
+Token *crtTk;
+
+int consume(int code)
+{
+if(pch->code==code){
+consumedTk=pch;
+crtTk=crtTk->next;
+return 1;
+}
+return 0;
+}
 
 
 int main(int argc, char **argv){
@@ -515,16 +530,19 @@ int main(int argc, char **argv){
 
     getNextToken();
 
-    Token *t;
+   crtTk = tokens;
 
-    t = tokens;
-
-    while(t != NULL)
+    while(crtTk != NULL)
     {
-       printf("%d\n", t->code);
-       t = t->next;
+       printf("%d\n", crtTk->code);
+       crtTk = crtTk->next;
     }
     
+    /*
+    ANALIZATOR LEXICAL - line 89
+    ANALIZATOR SINTACTIC - line 489
+    
+    */
     
 
     
