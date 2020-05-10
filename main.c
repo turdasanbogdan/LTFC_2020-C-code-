@@ -4,22 +4,28 @@
 #include <ctype.h>
 #include <stdarg.h>
 
+
+//!!!!!!!!!!!!!!!!!!--GLOBAL DECLARATIONS--!!!!!!!!!!!!!!!!!!
+
 enum{END, ID, BREAK,CHAR, DOUBLE,ELSE, FOR, IF , INT, RETURN, STRUCT, VOID, WHILE, 
 CT_INT, CT_REAL,CT_CHAR, CT_STRING,
 COMMA, SEMICOLON, LPAR, RPAR, LBRACKET,RBRACKET, LACC,RACC,
 ADD, SUB, MUL, DIV, DOT, AND, OR, NOT, ASSIGN, EQUAL, NOTEQ,LESS,LESSEQ,GREATER,GREATEREQ,
 SPACE, LINECOMMENT, COMMENT, UNKNOWN};
 
-#define SAFEALLOC(var,Type)if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
+enum{TB_INT,TB_DOUBLE,TB_CHAR,TB_STRUCT,TB_VOID};
 
-void err(const char *fmt, ...){
-    va_list va;
-    va_start(va, fmt);
-    fprintf(stderr,"error:");
-    vfprintf(stderr, fmt, va);
-    fputc('\n',stderr);
-    exit(-1);
-};
+enum{CLS_VAR,CLS_FUNC,CLS_EXTFUNC,CLS_STRUCT};
+enum{MEM_GLOBAL,MEM_ARG,MEM_LOCAL};
+
+
+
+char *pch;
+char special_characters[9]= "abfnrtv?";
+
+
+
+#define SAFEALLOC(var,Type)if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
 
 
 typedef struct _Token{
@@ -32,20 +38,6 @@ typedef struct _Token{
    int line; // linia din fisierul de intrare
    struct _Token *next; // inlantuire la urmatorul AL
 }Token;
-
-void tkerr(const Token *tk,const char *fmt,...)
-{
-    va_list va;
-    va_start(va,fmt);
-    fprintf(stderr,"error in line %d: ",tk->line);
-    vfprintf(stderr,fmt,va);
-    fputc('\n',stderr);
-    va_end(va);
-    exit(-1);
-};
-
-Token *tokens = NULL;
-Token *lastToken = NULL;
 
 Token* addTk(int code, int line)
 {
@@ -63,6 +55,27 @@ Token* addTk(int code, int line)
     lastToken=tk;
     return tk;
 };
+
+void tkerr(const Token *tk,const char *fmt,...)
+{
+    va_list va;
+    va_start(va,fmt);
+    fprintf(stderr,"error in line %d: ",tk->line);
+    vfprintf(stderr,fmt,va);
+    fputc('\n',stderr);
+    va_end(va);
+    exit(-1);
+};
+
+void err(const char *fmt, ...){
+    va_list va;
+    va_start(va, fmt);
+    fprintf(stderr,"error:");
+    vfprintf(stderr, fmt, va);
+    fputc('\n',stderr);
+    exit(-1);
+};
+
 
 char* createString(char *start, char *end)
 {
@@ -82,10 +95,13 @@ char* createString(char *start, char *end)
     
     return c; 
 }
-char *pch;
+
+Token *tokens = NULL;
+Token *lastToken = NULL;
+Token *consumedTk;
+Token *crtTk;
 
 
-char special_characters[9]= "abfnrtv?";
 //!!!!!!!!!!!!!!!!!!--ANALIZATORUL LEXICAL--!!!!!!!!!!!!!!!!!!
 int getNextToken(){
    
@@ -486,10 +502,105 @@ int getNextToken(){
 
 }
 
-//!!!!!!!!!!!!!!!!!!--ANALIZATORUL SINTACTIC--!!!!!!!!!!!!!!!!!!
+//!!!!!!!!!!!!!!!!!!--ANALIZATORUL SINTACTIC + ANALIZA DE DOMENIU--!!!!!!!!!!!!!!!!!!
 
-Token *consumedTk;
-Token *crtTk;
+struct _Symbol;
+typedef struct _Symbol Symbol;
+typedef struct{
+   Symbol **begin; // the beginning of the symbols, or NULL
+   Symbol **end; // the position after the last symbol
+   Symbol **after; // the position after the allocated space
+}Symbols;
+
+void initSymbols(Symbols *symbols)
+{
+   symbols->begin=NULL;
+   symbols->end=NULL;
+   symbols->after=NULL;
+}
+
+typedef struct _Symbol{
+   const char *name; // a reference to the name stored in a token
+   int cls; // CLS_*
+   int mem; // MEM_*
+   Type type;
+   int depth; // 0-global, 1-in function, 2... - nested blocks in function
+   union{
+      Symbols args; // used only of functions
+      Symbols members; // used only for structs
+   };
+}Symbol;
+
+Symbols symbols;
+
+typedef struct{
+   int typeBase; // TB_*
+   Symbol *s; // struct definition for TB_STRUCT
+   int nElements; // >0 array of given size, 0=array without size, <0 non array
+}Type;
+
+Symbol *addSymbol(Symbols *symbols,const char *name,int cls)
+   {
+      Symbol *s;
+      if(symbols->end == symbols->after)
+      { // create more room
+      
+      int count = symbols->after - symbols->begin;
+      int n=count*2; // double the room
+
+      if(n==0) n=1; // needed for the initial case
+      symbols->begin = (Symbol**)realloc(symbols->begin, n*sizeof(Symbol*));
+      
+      if(symbols->begin==NULL) err("not enough memory");
+      
+      symbols->end = symbols->begin+count;
+      symbols->after = symbols->begin+n;
+   }
+
+   SAFEALLOC(s,Symbol)
+   *symbols->end++ = s;
+   s->name = name;
+   s->cls = cls;
+   s->depth = crtDepth;
+   
+   return s;
+}
+
+Symbol * findSymbol( Symbols *symbols, const char *name  ){
+   if(symbols -> begin == NULL){
+      printf("nu avem simboluri");
+
+      return NULL;
+   }
+
+   Symbol **iterator = symbols -> end - 1 ;
+
+   while(iterator >= (Symbol **) symbols -> begin){
+      if(strcmp((*iterator) -> name, name)==0){
+         
+         return *iterator;
+      }
+
+      iterator --;
+   }
+
+   return NULL;
+}
+
+void deleteSymbolsAfter(Symbols *symbols, Symbol *start){
+   Symbol **iterator = symbols -> end-1;
+   symbols -> end--;
+   while(*iterator != start){
+      iterator --;
+   }
+   symbols-> end ++;
+}
+
+int crtDepth = 0;
+Symbol* crtStruct=NULL;
+Symbol* crtFunc=NULL;
+
+
 int unit();
 int declStruct();
 int declVar();
@@ -547,29 +658,109 @@ int unit(){
 	return 0;
 }
 
+// int declStruct(){
+
+// 	Token *start=crtTk; // daca nu se indeplineste totul, nu se consuma nimic atunci
+// 	if(consume(STRUCT))
+// 		if(consume(ID))
+// 			if(consume(LACC))
+// 			{   //while declVar(){}
+// 				for(;;){
+// 					if(declVar()){}
+// 					else break;
+// 				}
+// 				if(consume(RACC)){
+// 					if(consume(SEMICOLON)){
+// 						return 1;
+// 					}
+// 				}
+
+// 			}
+		
+// crtTk = start;	// restaurare pozitie initiala
+// return 0;
+ 
+// }
+
 int declStruct(){
 
-	Token *start=crtTk; // daca nu se indeplineste totul, nu se consuma nimic atunci
-	if(consume(STRUCT))
-		if(consume(ID))
-			if(consume(LACC))
-			{   //while declVar(){}
-				for(;;){
-					if(declVar()){}
-					else break;
-				}
-				if(consume(RACC)){
-					if(consume(SEMICOLON)){
-						return 1;
-					}
-				}
+   Token *start = crtTk;
+   Token *tkName;
 
-			}
-		
-crtTk = start;	// restaurare pozitie initiala
-return 0;
- 
+   if(consume(STRUCT)){
+      if(consume(ID)){
+         
+         tkName = crtTk;
+
+         if(consume(LACC)){
+            
+            if(findSymbol(&symbols,tkName->text)){
+               
+               tkerr(crtTk,"symbol redefinition: %s",tkName->text);
+
+            }
+            
+            crtStruct=addSymbol(&symbols,tkName->text,CLS_STRUCT);
+            initSymbols(&crtStruct->members);
+
+
+            for(;;){
+               if(declVar()){continue;}
+                  else break;
+            }   
+
+            if(consume(RACC)){
+               if(consume(SEMICOLON)){
+                  crtStruct = NULL;
+                  return 1;
+               } else tkerr(crtTk,"declStruct: dupa STRUCT ID LACC * (RACC) => Lipseste ;");
+
+            }else tkerr(crtTk,"declStruct: dupa STRUCT ID LACC (*) => Lipseste }");
+
+         }else tkerr(crtTk,"declStruct: dupa STRUCT ID  (LACC) => Lipseste }");
+
+
+      } else tkerr(crtTk,"declStruct: dupa STRUCT (ID) => Lipseste }");
+   } else tkerr(crtTk,"(STRUCT) => Lipseste }");
+
+   crtTk = start;
+   return 0;
 }
+
+void  addVar(Token *tkName,Type *t)
+    {
+    Symbol      *s;
+    if(crtStruct){
+        
+        if(findSymbol(&crtStruct->members,tkName->text))
+            
+            tkerr(crtTk,"symbol redefinition: %s",tkName->text);
+        
+        s=addSymbol(&crtStruct->members,tkName->text,CLS_VAR);
+        }
+    
+    else if(crtFunc){
+       
+        s=findSymbol(&symbols,tkName->text);
+        
+        if(s&&s->depth==crtDepth)
+            tkerr(crtTk,"symbol redefinition: %s",tkName->text);
+        s=addSymbol(&symbols,tkName->text,CLS_VAR);
+        
+        s->mem=MEM_LOCAL;
+        }
+    
+    else{
+        if(findSymbol(&symbols,tkName->text))
+            tkerr(crtTk,"symbol redefinition: %s",tkName->text);
+        s=addSymbol(&symbols,tkName->text,CLS_VAR);   
+        s->mem=MEM_GLOBAL;
+        
+        }
+
+    s->type=*t;
+
+   } 
 
 int declVar(){
    Token *start = crtTk;
